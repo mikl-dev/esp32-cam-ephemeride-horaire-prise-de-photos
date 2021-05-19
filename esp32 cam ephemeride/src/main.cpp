@@ -15,10 +15,12 @@
 #include "WiFi.h"
 #endif
 
+// Partie pour calcul d'ephemeride
 #include <time.h>
-#include <Wire.h> // bibliotheque Wire (RTC)
+#include <Wire.h> // bibliotheque Wire 
 #include <Ephemeris.h> // bibliotheque ephemeris
 
+// partie pour photo et envoi par mail
 #include "esp_camera.h"
 #include "Arduino.h"
 #include "FS.h"                // SD Card ESP32
@@ -39,8 +41,8 @@
 #include <WiFiUdp.h>
 #include "fs.h"
 
-const char* ssid = "Bbox-E9ED9E75";
-const char* password = "Vivimimi123456789";
+const char* ssid = "";
+const char* password = "";
 
 const int decalage = 2;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
 const int delaiDemande = 5 * 60; // nombre de secondes entre deux demandes consécutives au serveur NTP
@@ -50,6 +52,7 @@ unsigned long derniereMaJ = millis(); // moment de la plus récente mise à jour
 time_t maintenant;
 struct tm * timeinfo;
 
+// initialisation des variables pour ephemeride
 int day = 0;
 int month = 0;
 int year = 0;
@@ -58,7 +61,6 @@ float seconds;
 String heuresSunriseConcaten;
 String heuresSunsetConcaten;
 
-//debut ephemeris
 void printDate(int day, int month, int year)
 {
   Serial.print(day);
@@ -79,7 +81,7 @@ int printRiseAndSet(char *city, float latitude, float longitude, int UTCOffset, 
   {
     Serial.print("+");
   }
-  Serial.print(UTCOffset +1);  // a modifier : enlever +1 sin hiver
+  Serial.print(UTCOffset +1);  // a modifier : enlever +1 si hiver
   Serial.print(")");
   Serial.println(":");
 
@@ -197,9 +199,9 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    "michael.marchessoux@bbox.fr"    
-#define emailSenderPassword   "vivi2909"
-#define emailRecipient        "mikl-dev@bbox.fr"  
+#define emailSenderAccount    ""    
+#define emailSenderPassword   ""
+#define emailRecipient        ""  
 #define smtpServer            "smtp.bbox.fr"
 #define smtpServerPort        465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
