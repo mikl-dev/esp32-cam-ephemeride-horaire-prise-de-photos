@@ -321,7 +321,7 @@ void photo()
     // Add recipients, you can add more than one recipient
     smtpData.addRecipient(emailRecipient);
     //smtpData.addRecipient("YOUR_OTHER_RECIPIENT_EMAIL_ADDRESS@EXAMPLE.com");
-  smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
+    smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
     smtpData.addAttachFile("/Sight.jpg");
   
     //smtpData.setFileStorageType(MailClientStorageType::SD);
@@ -336,8 +336,8 @@ void photo()
 
     //Clear all data from Email object to free memory
     smtpData.empty();
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-    esp_deep_sleep_start();
+    // esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    // esp_deep_sleep_start();
 }
 void setup() {
   Serial.begin(115200);
