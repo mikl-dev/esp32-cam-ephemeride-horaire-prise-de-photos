@@ -139,11 +139,7 @@ void sendCallback(SendStatus msg)
 }
 void photo()
  {
-    for (int i=0; i<1800; i++)    
-    {
-      Serial.println(i);
-      delay(1000);
-    }  
+     
    //****** debut de boucle***************************************  
     camera_fb_t * fb = NULL;
     
@@ -220,6 +216,15 @@ void photo()
 
     //Clear all data from Email object to free memory
     smtpData.empty();
+
+    for (int i=0; i<1800; i++)    
+    {
+      Serial.println(i);
+      delay(1000);
+    } 
+
+
+
     esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
     esp_deep_sleep_start();
 
@@ -228,7 +233,7 @@ void photo()
 void afficheHeureDate() {
 
   timeinfo = localtime(&maintenant);
-  /*
+  
   Serial.print("Heure:   ");
   if ((timeinfo->tm_hour ) < 10) {
     Serial.print("0");
@@ -247,7 +252,7 @@ void afficheHeureDate() {
   }
   Serial.println(timeinfo->tm_sec);   // timeinfo->tm_sec: secondes (0 - 60)
 
-*/
+
 if (month == MARS)
   {
     uint8_t dernierDimancheMars = 31 - ((5 + year + (year >> 2)) % 7); 
@@ -354,8 +359,8 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
     Serial.print(seconds,0);
     Serial.println("s");
 
-    ConcHeureLeve = String(hours) + String(minutes - 30);
-    Serial.print("ConcHeureLeve: "); Serial.println("0" + ConcHeureLeve);
+    ConcHeureLeve = String(hours) + String(minutes);
+    Serial.print("ConcHeureLeve: "); Serial.println(ConcHeureLeve);
 
 
     // Convert floating hours to hours, minutes, seconds and display.
@@ -368,7 +373,7 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
     Serial.print(seconds,0);
     Serial.println("s");
 
-    ConcHeureCouche = String(hours) + String(minutes + 30);
+    ConcHeureCouche = String(hours) + String(minutes);
     Serial.print("ConcHeureCouche: "); Serial.println(ConcHeureCouche);
   }
   else if( sun.riseAndSetState == LocationOnEarthUnitialized )
@@ -385,12 +390,13 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
   }
 
   // *************** Photo si l'heure est comprise dans l'intervalle levée/couché
-  ConcNow = "0" + String(timeinfo->tm_hour) + String(timeinfo->tm_min);
+  ConcNow = String(timeinfo->tm_hour) + String(timeinfo->tm_min);
   Serial.print("ConcNow: "); Serial.println(ConcNow);
 
-
-  while (ConcNow >= "0" + ConcHeureLeve && ConcNow <= ConcHeureCouche) 
+  //      2017                    536                    2017                 2159 
+  while (ConcNow.toInt() >= ConcHeureLeve.toInt() && ConcNow.toInt() <= ConcHeureCouche.toInt())      //  nest pas < ou > car ce sont des chaines de caracteres   ! 
   {
+    Serial.println("Je suis dans la boucle et je prends une photo.");
     photo();
   }
     
