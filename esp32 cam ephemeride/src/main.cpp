@@ -7,8 +7,6 @@
    
 *************************************************************************************/
 
-//ATTENTION RETIRER +1 A LA LIGNE 56, 73 ET 82  POUR LE PASSAGE EN HIVER
-
 #if defined ARDUINO_ARCH_ESP8266  // s'il s'agit d'un ESP8266
 #include <ESP8266WiFi.h>
 #elif defined ARDUINO_ARCH_ESP32  // s'il s'agit d'un ESP32
@@ -35,14 +33,24 @@
 #include "esp_timer.h"
 #include "img_converters.h"
 #include "driver/rtc_io.h"
+#include "BluetoothSerial.h"
 
 // Pour l'heure du reseau
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include "fs.h"
 
-const char* ssid = "";
-const char* password = "";
+//#include "wdt.h"
+
+const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
+const char* password = "Vivimimi123456789"; //"Vivimimi123456789";
+
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+
+BluetoothSerial SerialBT;
+
+#include <Ephemeris.h>
 
 const int decalage = 2;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
 const int delaiDemande = 5 * 60; // nombre de secondes entre deux demandes consécutives au serveur NTP
@@ -51,8 +59,6 @@ unsigned long derniereDemande = millis(); // moment de la plus récente demande 
 unsigned long derniereMaJ = millis(); // moment de la plus récente mise à jour de l'affichage de l'heure
 time_t maintenant;
 struct tm * timeinfo;
-
-// initialisation des variables pour ephemeride
 int day = 0;
 int month = 0;
 int year = 0;
@@ -60,137 +66,17 @@ int hours, minutes;
 float seconds;
 String heuresSunriseConcaten;
 String heuresSunsetConcaten;
+bool heureEte;
+bool heureHiver;
+bool rinter;
+bool result; 
+bool resultUTC;
+const byte MARS = 3;
+const byte OCTOBRE = 10;
+String ConcHeureLeve = "";
+String ConcHeureCouche = "";
+String ConcNow = "";
 
-void printDate(int day, int month, int year)
-{
-  Serial.print(day);
-  Serial.print("/");
-  Serial.print(month);
-  Serial.print("/");
-  Serial.print(year);
-}
-
-int printRiseAndSet(char *city, float latitude, float longitude, int UTCOffset, int day, int month, int year, char *ref)
-{
-  Ephemeris::setLocationOnEarth(latitude, longitude);
-
-  Serial.print(city);
-  Serial.print(" (UTC");
-
-  if ( UTCOffset >= 0 )
-  {
-    Serial.print("+");
-  }
-  Serial.print(UTCOffset +1);  // a modifier : enlever +1 si hiver
-  Serial.print(")");
-  Serial.println(":");
-
-  SolarSystemObject sun = Ephemeris::solarSystemObjectAtDateAndTime(Sun,
-                          day, month, year,
-                          0, 0, 0);
-
-  // Print sunrise and sunset if available according to location on Earth
-  if ( sun.riseAndSetState == RiseAndSetOk )
-  {
-   /* int hours, minutes;
-    float seconds;
-   */
-    // Convert floating hours to hours, minutes, seconds and display.
-
-    Ephemeris::floatingHoursToHoursMinutesSeconds(Ephemeris::floatingHoursWithUTCOffset(sun.rise, UTCOffset), &hours, &minutes, &seconds);
-    heuresSunriseConcaten = String((hours +1)) + String(minutes);
-
-    Serial.print("heuresSunriseConcaten: "); Serial.println(heuresSunriseConcaten);
-
-    Serial.print("  Sunrise: ");
-    Serial.print(hours +1);   // enlever +1 si hiver
-    Serial.print("h");
-    Serial.print(minutes);
-    Serial.print("m");
-    Serial.print(seconds, 0);
-    Serial.println("s");
-
-    // Convert floating hours to hours, minutes, seconds and display.
-    Ephemeris::floatingHoursToHoursMinutesSeconds(Ephemeris::floatingHoursWithUTCOffset(sun.set, UTCOffset), &hours, &minutes, &seconds);
-    int hours, minutes;
-    float seconds;
-    heuresSunsetConcaten = String((hours +1)) + String(minutes);
-    
-    Serial.print("heuresSunsetConcaten: "); Serial.println(heuresSunsetConcaten);
-
-    Serial.print("  Sunset:  ");  // enlever +1 si hiver
-    Serial.print(hours +1);
-    Serial.print("h");
-    Serial.print(minutes);
-    Serial.print("m");
-    Serial.print(seconds, 0);
-    Serial.println("s");
-  }
-  else if ( sun.riseAndSetState == LocationOnEarthUnitialized )
-  {
-    Serial.println("You must set your location on Earth first.");
-  }
-  else if ( sun.riseAndSetState == ObjectAlwaysInSky )
-  {
-    Serial.println("Sun always in sky for your location.");
-  }
-  else if ( sun.riseAndSetState == ObjectNeverInSky )
-  {
-    Serial.println("Sun never in sky for your location.");
-  }
-
-  Serial.print("  Ref: ");
-  Serial.println(ref);
-  Serial.println();
-
-  //return heuresSunriseConcaten, heuresSunsetConcaten  ;
-}
-
-void afficheHeureDate() {
-
-  timeinfo = localtime(&maintenant);
-
-  Serial.print("Heure:   ");
-  if ((timeinfo->tm_hour ) < 10) {
-    Serial.print("0");
-  }
-  Serial.print(timeinfo->tm_hour );  // heure entre 0 et 23
-  Serial.print(":");
-
-  if (timeinfo->tm_min < 10) {
-    Serial.print("0");
-  }
-  Serial.print(timeinfo->tm_min);   // timeinfo->tm_min: minutes (0 - 59)
-  Serial.print(":");
-
-  if (timeinfo->tm_sec < 10) {
-    Serial.print("0");
-  }
-  Serial.print(timeinfo->tm_sec);   // timeinfo->tm_sec: secondes (0 - 60)
-
-
-  Serial.print("        Date:    ");
-
-  if (timeinfo->tm_mday < 10) {
-    Serial.print("0");
-    day = 0;
-  }
-  Serial.print(timeinfo->tm_mday);  // timeinfo->tm_mday: jour du mois (1 - 31)
-  Serial.print("-");
-  day = day + timeinfo->tm_mday;
-
-  if ((timeinfo->tm_mon + 1) < 10) { //+1
-    Serial.print("0");
-    month = 0;
-  }
-
-  Serial.print(timeinfo->tm_mon + 1);    // timeinfo->tm_mon: mois (0 - 11, 0 correspond à janvier)
-  Serial.print("-");
-  Serial.println(timeinfo->tm_year + 1900);  // timeinfo->tm_year: tm_year nombre d'années écoulées depuis 1900
-  month = month + timeinfo->tm_mon +1;
-  year = timeinfo->tm_year + 1900;
-
-}
 WiFiClient espClient;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
@@ -199,11 +85,11 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    ""    
-#define emailSenderPassword   ""
-#define emailRecipient        ""  
+#define emailSenderAccount    "michael.marchessoux@bbox.fr"    
+#define emailSenderPassword   "vivi2909"
+#define emailRecipient        "mikl-dev@bbox.fr"  
 #define smtpServer            "smtp.bbox.fr"
-#define smtpServerPort        465  //465 //587 //465
+#define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
 SMTPData smtpData;
 
@@ -229,6 +115,17 @@ SMTPData smtpData;
 #define uS_TO_S_FACTOR 1000000ULL   //conversion factor for micro seconds to seconds */
 int pictureNumber = 0;
 
+
+/*
+void software_Reboot()
+{
+  wdt_enable(WDTO_15MS);
+
+  while(1)
+  {
+
+  }
+}*/
 // Callback function to get the Email sending status
 void sendCallback(SendStatus msg) 
 {
@@ -240,16 +137,14 @@ void sendCallback(SendStatus msg)
     Serial.println("----------------");
   }
 }
-
-
 void photo()
  {
-  for (byte i=0; i<60; i++)
-  {
-    //Serial.println(i);
-    delay(1000);
-  }  
-  //****** debut de boucle***************************************  
+    for (int i=0; i<1800; i++)    
+    {
+      Serial.println(i);
+      delay(1000);
+    }  
+   //****** debut de boucle***************************************  
     camera_fb_t * fb = NULL;
     
     // Take Picture with Camera
@@ -282,17 +177,6 @@ void photo()
     rtc_gpio_hold_en(GPIO_NUM_4);
   //*************************************************************************************************************************
 
-    Serial.print("Connecting");
-
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      Serial.print(".");
-      delay(200);
-    }
-
-    Serial.println();
-    Serial.println("WiFi connected.");
-    Serial.println();
     Serial.println("Preparing to send email");
     Serial.println();
 
@@ -321,7 +205,7 @@ void photo()
     // Add recipients, you can add more than one recipient
     smtpData.addRecipient(emailRecipient);
     //smtpData.addRecipient("YOUR_OTHER_RECIPIENT_EMAIL_ADDRESS@EXAMPLE.com");
-    smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
+  smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
     smtpData.addAttachFile("/Sight.jpg");
   
     //smtpData.setFileStorageType(MailClientStorageType::SD);
@@ -336,71 +220,189 @@ void photo()
 
     //Clear all data from Email object to free memory
     smtpData.empty();
-    // esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-    // esp_deep_sleep_start();
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    esp_deep_sleep_start();
+
+    //software_Reboot()
 }
-void setup() {
+void afficheHeureDate() {
+
+  timeinfo = localtime(&maintenant);
+  /*
+  Serial.print("Heure:   ");
+  if ((timeinfo->tm_hour ) < 10) {
+    Serial.print("0");
+  }
+  Serial.print(timeinfo->tm_hour );  // heure entre 0 et 23
+  Serial.print(":");
+
+  if (timeinfo->tm_min < 10) {
+    Serial.print("0");
+  }
+  Serial.print(timeinfo->tm_min);   // timeinfo->tm_min: minutes (0 - 59)
+  Serial.print(":");
+
+  if (timeinfo->tm_sec < 10) {
+    Serial.print("0");
+  }
+  Serial.println(timeinfo->tm_sec);   // timeinfo->tm_sec: secondes (0 - 60)
+
+*/
+if (month == MARS)
+  {
+    uint8_t dernierDimancheMars = 31 - ((5 + year + (year >> 2)) % 7); 
+    rinter = (day == dernierDimancheMars && day != 0);        
+    result = day > dernierDimancheMars || rinter;
+  }												
+  if (month == OCTOBRE)						
+  {
+    uint8_t dernierDimancheOctobre = 31 - ((2 + year + (year >> 2)) % 7);
+    rinter = (day == dernierDimancheOctobre && day == 0);
+    result = day < dernierDimancheOctobre || rinter;
+  } 
+  resultUTC = MARS < month && month < OCTOBRE;   
+
+  // pour lancer photo  il faut savoir si on est dans la plage levee/couché
+ /*
+    concatene H leve + h couche + h system
+    6h00<9h15<21h40
+      600<915<2140          dans ce cas photo 
+
+ */
+
+
+  //	  leve conc < now conc  &&   now conc  <  couche conc     -> si 0-> pas de photos, Si 1> photo
+  
+  // definir si on est en H hivers ou ete
+  if (resultUTC == 0)
+  {
+    heureHiver = 1;
+    heureEte = !heureHiver;
+  }
+  else if (resultUTC == 1)
+  {
+    heureEte = 1;
+    heureHiver = !heureEte;
+  }
+
+
+
+
+
+  if (timeinfo->tm_mday < 10) {
+    //Serial.print("0");
+    day = 0;
+    day = day + timeinfo->tm_mday;      // <---- a revoir   concatenation
+  }
+  else {
+    day = timeinfo->tm_mday;
+  }
+
+  //Serial.print(timeinfo->tm_mday);  // timeinfo->tm_mday: jour du mois (1 - 31)
+  //Serial.print("-");
+
+  if ((timeinfo->tm_mon + 1) < 10) {
+    //Serial.print("0");
+    month = 0;
+  }
+
+  //Serial.print(timeinfo->tm_mon + 1);    // timeinfo->tm_mon: mois (0 - 11, 0 correspond à janvier)
+  //Serial.print("-");
+  //Serial.println(timeinfo->tm_year + 1900);  // timeinfo->tm_year: tm_year nombre d'années écoulées depuis 1900
+  month = month + timeinfo->tm_mon +1;
+  year = timeinfo->tm_year + 1900;
+}
+void printDate(int day, int month, int year)
+{
+  Serial.print(day);
+  Serial.print("/");
+  Serial.print(month);
+  Serial.print("/");
+  Serial.println(year);
+}
+void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset, int day, int month, int year, char *ref)
+{
+  Ephemeris::setLocationOnEarth(latitude,longitude);
+    
+  Serial.print(city);
+  Serial.print(" (UTC");
+  if( UTCOffset >= 0 )
+  {
+    Serial.print("+");
+  }
+  Serial.print(UTCOffset);  
+  Serial.print(")");
+  Serial.println(":");
+           
+  SolarSystemObject sun = Ephemeris::solarSystemObjectAtDateAndTime(Sun,
+                                                                    day,month,year,
+                                                                    0,0,0);
+
+    // Print sunrise and sunset if available according to location on Earth
+  if( sun.riseAndSetState == RiseAndSetOk )
+  {
+    int hours,minutes;
+    FLOAT seconds;
+
+    // Convert floating hours to hours, minutes, seconds and display.
+    Ephemeris::floatingHoursToHoursMinutesSeconds(Ephemeris::floatingHoursWithUTCOffset(sun.rise,UTCOffset), &hours, &minutes, &seconds);
+    Serial.print("  Sunrise: ");
+    Serial.print(hours);
+    Serial.print("h");
+    Serial.print(minutes);
+    Serial.print("m");
+    Serial.print(seconds,0);
+    Serial.println("s");
+
+    ConcHeureLeve = String(hours) + String(minutes - 30);
+    Serial.print("ConcHeureLeve: "); Serial.println("0" + ConcHeureLeve);
+
+
+    // Convert floating hours to hours, minutes, seconds and display.
+    Ephemeris::floatingHoursToHoursMinutesSeconds(Ephemeris::floatingHoursWithUTCOffset(sun.set,UTCOffset), &hours, &minutes, &seconds);
+    Serial.print("  Sunset:  ");
+    Serial.print(hours);
+    Serial.print("h");
+    Serial.print(minutes);
+    Serial.print("m");
+    Serial.print(seconds,0);
+    Serial.println("s");
+
+    ConcHeureCouche = String(hours) + String(minutes + 30);
+    Serial.print("ConcHeureCouche: "); Serial.println(ConcHeureCouche);
+  }
+  else if( sun.riseAndSetState == LocationOnEarthUnitialized )
+  {
+    Serial.println("You must set your location on Earth first.");
+  }
+  else if( sun.riseAndSetState == ObjectAlwaysInSky )
+  {
+    Serial.println("Sun always in sky for your location.");
+  }
+  else if( sun.riseAndSetState == ObjectNeverInSky )
+  {
+    Serial.println("Sun never in sky for your location.");
+  }
+
+  // *************** Photo si l'heure est comprise dans l'intervalle levée/couché
+  ConcNow = "0" + String(timeinfo->tm_hour) + String(timeinfo->tm_min);
+  Serial.print("ConcNow: "); Serial.println(ConcNow);
+
+
+  while (ConcNow >= "0" + ConcHeureLeve && ConcNow <= ConcHeureCouche) 
+  {
+    photo();
+  }
+    
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  esp_deep_sleep_start();
+  //*****************************************************************************
+
+}		
+void setup() 
+{
   Serial.begin(115200);
-  
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
  
-  WiFi.mode(WIFI_STA);
-
-  Serial.println();
-
-  WiFi.begin(ssid, password);
-  Serial.print("Connexion au reseau WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(1000);
-  }
-
-  Serial.println();
-
-  
-  configTime(decalage * 3600, 0, "fr.pool.ntp.org");  //serveurs canadiens
-       // en Europe, essayez europe.pool.ntp.org ou fr.pool.ntp.org
-  
-  Serial.print("Attente date et heure");
-
-  while (time(nullptr) <= 100000) {
-    Serial.print(".");
-    delay(1000);
-  }
-
-  time(&maintenant);
-
-  Serial.println("");
-  
-//**********************************************************************************************************************************************
-  afficheHeureDate();
-
-  Serial.print("SunRise/SunSet at ");
-    printDate(day, month, year);
-    Serial.println("");
-    Serial.print("Date: "); Serial.println(day);
-    Serial.println(":\n");
-
-    //               CITY         LATITUDE    LONGITUDE     TZ   DATE             REFERENCE
-    printRiseAndSet("Caudry",    50.1258333,    3.4051032,  +1,  day, month, year, "sunearthtools (10/2/2017): SunRise: 08:07:00 | SunSet: 18:03:19");
-
-
-  // Démarrage du client NTP - Start NTP client
-  timeClient.begin();
-  timeClient.update();
-  Serial.println(timeClient.getFormattedTime());
-  delay(1 * 1000);  // Attendre 1s 
-
-  File f = SPIFFS.open("/lastEvent.txt", "r"); 
-  int lastEvent = f.readStringUntil('n').toInt();
-  Serial.println(lastEvent);
-  f.close();
-
-  f = SPIFFS.open("/lastEvent.txt", "w");
-  f.println(_now); 
-  f.close();
-
- delay(500);
  Serial.println("WELCOME");
 if (!SPIFFS.begin(true)) {
   Serial.println("An Error has occurred while mounting SPIFFS");
@@ -410,11 +412,8 @@ else {
   Serial.println("SPIFFS mounted successfully");
 }
 SPIFFS.format();
+EEPROM.begin(400);
 
- 
-   EEPROM.begin(400);
-   
- 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -458,40 +457,129 @@ SPIFFS.format();
     return;
   }
 
+ 
+  //SerialBT.begin("ESP32");
+  //delay(100);
+  //SerialBT.print("Module Bluetooth Initialisé.");
 
-  Serial.print("timeClient.getHours(): "); Serial.println(((timeClient.getHours())+1) & timeClient.getMinutes());
-  Serial.print("heuresSunriseConcaten: "); Serial.println(heuresSunriseConcaten);
-  Serial.print("timeClient.getHours(): "); Serial.println(((timeClient.getHours())+1) & timeClient.getMinutes());
-  Serial.print("heuresSunsetConcaten: "); Serial.println(heuresSunsetConcaten);  
+  WiFi.mode(WIFI_STA);
+  Serial.println();
+  WiFi.begin(ssid, password);
+  Serial.println("Connexion au reseau WiFi");
 
-  //if((timeClient.getHours())+1 >= int(heuresSunriseConcaten))
-  //{ 
-    photo();
-  //}
-  //Serial.println("Il n'est pas encore l'heure ne prendre des photos");
-}
-void loop() {
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  SerialBT.print("ESP32 connecté au WIFI.");
+  Serial.println();
 
-  // est-ce le moment de demander l'heure NTP?
-  if ((millis() - derniereDemande) >=  delaiDemande * 1000 ) {
-    time(&maintenant);
-    derniereDemande = millis();
+  configTime(decalage * 3600, 0, "fr.pool.ntp.org");  //ca.pool.ntp.org serveurs canadiens
+       // en Europe, essayez europe.pool.ntp.org ou fr.pool.ntp.org
+  
+  Serial.print("Attente date et heure");
 
-    Serial.println("Interrogation du serveur NTP");
+  while (time(nullptr) <= 100000) {
+    Serial.print(".");
+    delay(1000);
   }
 
-  // est-ce que millis() a débordé?
-  if (millis() < derniereDemande ) {
-    time(&maintenant);
-    derniereDemande = millis();
-  }
+  time(&maintenant);
+  Serial.println("");
+  Serial.print("Maintenant: ");
+  Serial.println(time(&maintenant));
 
-  // est-ce le moment de raffraichir la date indiquée?
-  if ((millis() - derniereMaJ) >=   1000 ) {
-    maintenant = maintenant + 1;
-    //afficheHeureDate();
-    derniereMaJ = millis();
+  afficheHeureDate();
+  
+  // Affichage sur le BT 
+  SerialBT.print("Date: ");
+  SerialBT.print(day);
+  SerialBT.print("/");
+  SerialBT.print(month);
+  SerialBT.print("/");
+  SerialBT.println(year);
+
+  SerialBT.print("Heure:   ");
+  if ((timeinfo->tm_hour ) < 10) {
+    SerialBT.print("0");
+  }
+  SerialBT.print(timeinfo->tm_hour );  // heure entre 0 et 23
+  SerialBT.print(":");
+
+  if (timeinfo->tm_min < 10) {
+    SerialBT.print("0");
+  }
+  SerialBT.print(timeinfo->tm_min);   // timeinfo->tm_min: minutes (0 - 59)
+  SerialBT.print(":");
+
+  if (timeinfo->tm_sec < 10) {
+    SerialBT.print("0");
+  }
+  SerialBT.println(timeinfo->tm_sec);   // timeinfo->tm_sec: secondes (0 - 60)
+
+
+  //int day=27,month=5,year=2021;
+
+  Serial.print("SunRise/SunSet at ");
+  printDate(day,month,year);
+  Serial.print(":\n");
+
+  //En France métropolitaine :
+  //1: ete    Passage de l'heure d'hiver à l'heure d'été le dernier dimanche de mars à 1h00 UTC (à 2h00 locales il est 3h00)
+  //0: hiver  Passage de l'heure d'été à l'heure d'hiver le dernier dimanche d'octobre à 1h00 UTC (à 3h00 locales il est 2h00)
+
+
+  // pour essai H hiver / ete
+  //day = 01;
+  //month = 2;
+  //year = 2021;
+
+  if (month == MARS)
+  {
+    uint8_t dernierDimancheMars = 31 - ((5 + year + (year >> 2)) % 7); 
+    rinter = (day == dernierDimancheMars && day != 0);        
+    result = day > dernierDimancheMars || rinter;
+  }												
+  if (month == OCTOBRE)						
+  {
+    uint8_t dernierDimancheOctobre = 31 - ((2 + year + (year >> 2)) % 7);
+    rinter = (day == dernierDimancheOctobre && day == 0);
+    result = day < dernierDimancheOctobre || rinter;
+  } 
+  resultUTC = MARS < month && month < OCTOBRE;   //  -> ajouter le resultat a UTC ((utc+1) + return ou bien ajouter a lever et coucher 
+  //	  leve conc < now conc  &&   now conc  <  couche conc     -> si 0-> pas de photos, Si 1> photo
+  
+  // definir si on est en H hivers ou ete
+  if (resultUTC == 0)
+  {
+    heureHiver = 1;
+    heureEte = !heureHiver;
+  }
+  else if (resultUTC == 1)
+  {
+    heureEte = 1;
+    heureHiver = !heureEte;
+  }
+  Serial.print("heureEte: ");Serial.println(heureEte);
+  Serial.print("heureHiver: ");Serial.println(heureHiver);
+
+  // ajouter 1 heure en fonction
+  byte hiver_ete = 1;
+  if (heureEte == 1)
+  {
+    hiver_ete = 1;
+  }
+  else
+  {
+    hiver_ete = 0;
   }
 
   
+   // changer TZ du tableau  +1 ou +2 selon ete ou hiver a confirmer avec greg
+
+  //               CITY         LATITUDE    LONGITUDE     TZ   DATE             REFERENCE
+  printRiseAndSet("Caudry",    50.1258333,    3.4051032, 1 + hiver_ete,  day, month, year, "sunearthtools (10/2/2017): SunRise: 08:07:00 | SunSet: 18:03:19");
+}
+void loop() 
+{ 
 }
