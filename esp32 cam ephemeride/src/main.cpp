@@ -76,6 +76,8 @@ const byte OCTOBRE = 10;
 String ConcHeureLeve = "";
 String ConcHeureCouche = "";
 String ConcNow = "";
+String Smonth = "";
+String Smin = "";
 
 WiFiClient espClient;
 WiFiUDP ntpUDP;
@@ -149,6 +151,7 @@ void photo()
       Serial.println("Camera capture failed");
       return;
     }
+    
   String path = "/Sight.jpg";
     File file = SPIFFS.open(path, FILE_WRITE);
     // Path where new picture will be saved in SD Card
@@ -185,24 +188,50 @@ void photo()
     //smtpData.setSTARTTLS(true);
 
     // Set the sender name and Email
-    smtpData.setSender("Cat_00", emailSenderAccount);
+    if (timeinfo->tm_mon +1 < 10) 
+    {
+      Smonth = "0" + String(timeinfo->tm_mon +1);
+      //Serial.print("mois: "); Serial.println(Smonth);
+    }
+    else
+    {
+      Smonth = String(timeinfo->tm_mon +1);
+    }
+    if (timeinfo->tm_min < 10) 
+    {
+      Smin ="0" + String(timeinfo->tm_min);
+    }
+    else
+    {
+      Smin = String(timeinfo->tm_min);
+    }
+    Serial.print("Date pour le mail: "); Serial.print(day); Serial.print("/"); Serial.print(Smonth); Serial.print("/"); Serial.println(year);
+    String message = String(day) + String(Smonth) + String(year) + "    " + String(timeinfo->tm_hour) + String(Smin);
+    
+    smtpData.setSender(message, emailSenderAccount);
+    //smtpData.setSender("Cat_00", emailSenderAccount);    --------------------------> original
 
     // Set Email priority or importance High, Normal, Low or 1 to 5 (1 is highest)
-    smtpData.setPriority("High");
+    smtpData.setPriority("Normal");
 
     // Set the subject
     smtpData.setSubject(emailSubject);
 
     // Set the message with HTML format
-    smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Find a thing !</h1><p>- Sent from ESP32 board</p></div>", true);
+    smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
     // Set the email message in text format (raw)
     //smtpData.setMessage("Thing on position #00", false);
 
     // Add recipients, you can add more than one recipient
     smtpData.addRecipient(emailRecipient);
     //smtpData.addRecipient("YOUR_OTHER_RECIPIENT_EMAIL_ADDRESS@EXAMPLE.com");
-  smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
-    smtpData.addAttachFile("/Sight.jpg");
+    smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
+
+
+    //String nomFichier = String(day) + String(Smonth) + String(year) + "    " + String(hours) + String(minutes);
+    //Serial.print("Date pour la photo: "); Serial.println(nomFichier);
+    //smtpData.addAttachFile("/" + nomFichier + ".jpg");
+    smtpData.addAttachFile("/Sight.jpg");    //-----> original
   
     //smtpData.setFileStorageType(MailClientStorageType::SD);
     
@@ -390,6 +419,17 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
   }
 
   // *************** Photo si l'heure est comprise dans l'intervalle levée/couché
+
+    if (timeinfo->tm_min < 10) 
+    {
+      String minenforme = "0";
+      minenforme = minenforme + String(timeinfo->tm_min);      // <---- a revoir   concatenation
+    }
+    else
+    {
+      String minenforme = String(timeinfo->tm_min);
+    }
+  
   ConcNow = String(timeinfo->tm_hour) + String(timeinfo->tm_min);
   Serial.print("ConcNow: "); Serial.println(ConcNow);
 
