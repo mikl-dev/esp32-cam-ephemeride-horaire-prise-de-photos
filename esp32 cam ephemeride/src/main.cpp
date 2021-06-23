@@ -39,8 +39,10 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-const char* ssid = "";
-const char* password = "";
+//#include "wdt.h"
+
+const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
+const char* password = "Vivimimi123456789"; //"Vivimimi123456789";
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
@@ -76,6 +78,7 @@ String ConcHeureCouche = "";
 String ConcNow = "";
 String Smonth = "";
 String Smin = "";
+String minenforme = "";
 
 WiFiClient espClient;
 WiFiUDP ntpUDP;
@@ -85,9 +88,9 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    ""    
-#define emailSenderPassword   ""
-#define emailRecipient        ""  
+#define emailSenderAccount    "michael.marchessoux@bbox.fr"    
+#define emailSenderPassword   "vivi2909"
+#define emailRecipient        "mikl-dev@bbox.fr"  
 #define smtpServer            "smtp.bbox.fr"
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
@@ -116,7 +119,6 @@ SMTPData smtpData;
 int pictureNumber = 0;
 
 
-// Callback function to get the Email sending status
 void sendCallback(SendStatus msg) 
 {
   // Print the current status
@@ -139,8 +141,9 @@ void photo()
       Serial.println("Camera capture failed");
       return;
     }
+    // Impossible de changer le nom du fichier car day, Smonth et year sont defini bien apres
     
-  String path = "/Sight.jpg";
+    String path = "/Sight.jpg";
     File file = SPIFFS.open(path, FILE_WRITE);
     // Path where new picture will be saved in SD Card
     
@@ -284,17 +287,6 @@ if (month == MARS)
   } 
   resultUTC = MARS < month && month < OCTOBRE;   
 
-  // pour lancer photo  il faut savoir si on est dans la plage levee/couché
- /*
-    concatene H leve + h couche + h system
-    6h00<9h15<21h40
-      600<915<2140          dans ce cas photo 
-
- */
-
-
-  //	  leve conc < now conc  &&   now conc  <  couche conc     -> si 0-> pas de photos, Si 1> photo
-  
   // definir si on est en H hivers ou ete
   if (resultUTC == 0)
   {
@@ -368,10 +360,20 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
 
     // Convert floating hours to hours, minutes, seconds and display.
     Ephemeris::floatingHoursToHoursMinutesSeconds(Ephemeris::floatingHoursWithUTCOffset(sun.rise,UTCOffset), &hours, &minutes, &seconds);
+    if (minutes < 10) 
+    {
+      String minutes = "0";
+      minenforme = minutes + String(minutes);      // <---- a revoir   concatenation
+    }
+    else
+    {
+      minenforme = String(minutes);
+    }
+    
     Serial.print("  Sunrise: ");
     Serial.print(hours);
     Serial.print("h");
-    Serial.print(minutes);
+    Serial.print(minenforme);
     Serial.print("m");
     Serial.print(seconds,0);
     Serial.println("s");
@@ -382,15 +384,27 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
 
     // Convert floating hours to hours, minutes, seconds and display.
     Ephemeris::floatingHoursToHoursMinutesSeconds(Ephemeris::floatingHoursWithUTCOffset(sun.set,UTCOffset), &hours, &minutes, &seconds);
+    if (minutes < 10) 
+    {
+      String minutes = "0";
+      minenforme = minutes + String(minutes);      // <---- a revoir   concatenation
+    }
+    else
+    {
+      minenforme = String(minutes);
+    }
+    
+    
     Serial.print("  Sunset:  ");
     Serial.print(hours);
     Serial.print("h");
-    Serial.print(minutes);
+    Serial.print(minenforme);
     Serial.print("m");
     Serial.print(seconds,0);
     Serial.println("s");
 
-    ConcHeureCouche = String(hours) + String(minutes);
+    ConcHeureCouche = String(hours) + String(minenforme);
+    Serial.print("ConcHeureCouche: "); Serial.println(minenforme);
     Serial.print("ConcHeureCouche: "); Serial.println(ConcHeureCouche);
   }
   else if( sun.riseAndSetState == LocationOnEarthUnitialized )
@@ -408,18 +422,17 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
 
   // *************** Photo si l'heure est comprise dans l'intervalle levée/couché
 
-    //if (timeinfo->tm_min < 10) 
-    //{
-    //  String minenforme = "0";
-    //  minenforme = minenforme + String(timeinfo->tm_min);      // <---- a revoir   concatenation
-    //}
-    //else
-    //{
-      String heureenforme = String(timeinfo->tm_hours);
-      String minenforme = String(timeinfo->tm_min);
-    //}
+    if (minutes < 10) 
+    {
+      String minutes = "0";
+      minenforme = minutes + String(minutes);      // <---- a revoir   concatenation
+    }
+    else
+    {
+      minenforme = String(minutes);
+    }
   
-  ConcNow = heureenforme + minenforme;
+  ConcNow = String(timeinfo->tm_hour) + minenforme;
   Serial.print("ConcNow: "); Serial.println(ConcNow);
 
   //      2017                    536                    2017                 2159 
@@ -494,7 +507,7 @@ EEPROM.begin(400);
 
  
   //SerialBT.begin("ESP32");
-  //delay(100);
+  //delay(500);
   //SerialBT.print("Module Bluetooth Initialisé.");
 
   WiFi.mode(WIFI_STA);
