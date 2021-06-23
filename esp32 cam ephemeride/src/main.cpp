@@ -420,17 +420,18 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
 
   // *************** Photo si l'heure est comprise dans l'intervalle levée/couché
 
-    if (timeinfo->tm_min < 10) 
-    {
-      String minenforme = "0";
-      minenforme = minenforme + String(timeinfo->tm_min);      // <---- a revoir   concatenation
-    }
-    else
-    {
+    //if (timeinfo->tm_min < 10) 
+    //{
+    //  String minenforme = "0";
+    //  minenforme = minenforme + String(timeinfo->tm_min);      // <---- a revoir   concatenation
+    //}
+    //else
+    //{
+      String heureenforme = String(timeinfo->tm_hours);
       String minenforme = String(timeinfo->tm_min);
-    }
+    //}
   
-  ConcNow = String(timeinfo->tm_hour) + String(timeinfo->tm_min);
+  ConcNow = heureenforme + minenforme;
   Serial.print("ConcNow: "); Serial.println(ConcNow);
 
   //      2017                    536                    2017                 2159 
