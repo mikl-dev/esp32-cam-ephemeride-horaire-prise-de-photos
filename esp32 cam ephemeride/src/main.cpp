@@ -41,8 +41,8 @@
 
 //#include "wdt.h"
 
-const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
-const char* password = "Vivimimi123456789"; //"Vivimimi123456789";
+const char* ssid = "";
+const char* password = "";
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
