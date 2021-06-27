@@ -44,6 +44,7 @@
 const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
 const char* password = "Vivimimi123456789"; //"Vivimimi123456789"; 
 
+//FSInfo fsInfo;
 
 const int decalage = 2;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
 const int delaiDemande = 5 * 60; // nombre de secondes entre deux demandes consécutives au serveur NTP
@@ -118,9 +119,14 @@ SMTPData smtpData;
 int pictureNumber = 0;
 //**********************************************************************
 //******************** Programmes apellés ******************************
+void Interroge_SPIFFS()
+{
+  Serial.print("SPIFFS.totalBytes: "); Serial.println(SPIFFS.totalBytes());
+  Serial.print("SPIFFS.usedBytes: "); Serial.println(SPIFFS.usedBytes());
+}
 void RecupereHeureDate()
 {
-  //*** chercher l'heure sur le reseau  a chaque debut de boucle***
+//*** chercher l'heure sur le reseau  a chaque debut de boucle***
 //ca.pool.ntp.org serveurs canadiens. En Europe, essayez europe.pool.ntp.org ou fr.pool.ntp.org
 configTime(decalage * 3600, 0, "fr.pool.ntp.org");  
 
@@ -188,7 +194,7 @@ Serial.print("heure: "); Serial.print(Sheure); Serial.print(":"); Serial.print(S
     month = Smonth.toInt();
   }
 
-  Serial.print("controle mois: "); Serial.print(month);
+  //Serial.print("controle mois: "); Serial.print(Smonth);
 
   year = timeinfo->tm_year + 1900;
   Syear = String(year);
@@ -428,7 +434,7 @@ void photo()
     //String nomFichier = String(day) + String(Smonth) + String(year) + "    " + String(hours) + String(minutes);
     //Serial.print("Date pour la photo: "); Serial.println(nomFichier);
     //smtpData.addAttachFile("/" + nomFichier + ".jpg");
-    smtpData.addAttachFile("/Sight.jpg");    //-----> original
+    //smtpData.addAttachFile("/Sight.jpg");    //-----> original
     smtpData.addAttachFile(nomImage);
     //smtpData.setFileStorageType(MailClientStorageType::SD);
     
@@ -442,6 +448,12 @@ void photo()
 
     //Clear all data from Email object to free memory
     smtpData.empty();
+
+    Interroge_SPIFFS();
+    SPIFFS.remove(nomImage);
+    Serial.print("Fichier effacé: "); Serial.println(SPIFFS.remove(nomImage));
+
+    Interroge_SPIFFS();
 
     for (int i=0; i<1800; i++)    
     {
