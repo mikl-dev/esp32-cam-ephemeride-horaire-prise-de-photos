@@ -41,8 +41,8 @@
 #include <WiFiUdp.h>
 //*******************************************************************************
 //************* Declaration des variables *******************************/
-const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
-const char* password = "Vivimimi123456789"; //"Vivimimi123456789"; 
+const char* ssid = "";  
+const char* password = ""; 
 
 //FSInfo fsInfo;
 
@@ -88,9 +88,9 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    "michael.marchessoux@bbox.fr"    
-#define emailSenderPassword   "vivi2909"
-#define emailRecipient        "mikl-dev@bbox.fr"  
+#define emailSenderAccount    ""    
+#define emailSenderPassword   ""
+#define emailRecipient        "r"  
 #define smtpServer            "smtp.bbox.fr"
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
