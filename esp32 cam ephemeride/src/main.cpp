@@ -364,6 +364,8 @@ void photo()
     fb = esp_camera_fb_get();  
     if(!fb) {
       Serial.println("Camera capture failed");
+      Interroge_SPIFFS();    // interroge le spiffs
+      ESP.restart();         // redemarre l'ESP
       return;
     }
     
