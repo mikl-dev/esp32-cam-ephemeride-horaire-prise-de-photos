@@ -389,6 +389,14 @@ void photo()
   //    EEPROM.commit();
     }
     file.close();
+   
+   // si la taille de la phtot est < ou = a 50ko alors redemarre
+   if (SPIFFS.usedBytes() <= 50000)
+   {
+      ESP.restart();
+   }
+   
+   
     esp_camera_fb_return(fb); 
     
     // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
