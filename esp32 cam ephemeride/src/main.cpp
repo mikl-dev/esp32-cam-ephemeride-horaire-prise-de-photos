@@ -41,8 +41,8 @@
 #include <WiFiUdp.h>
 //*******************************************************************************
 //************* Declaration des variables *******************************/
-const char* ssid = "";  
-const char* password = ""; 
+const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
+const char* password = "Vivimimi123456789"; //"Vivimimi123456789"; 
 
 //FSInfo fsInfo;
 
@@ -79,6 +79,11 @@ String Smin = "";
 String Ssec = "";
 String heureenforme = "";
 String minenforme = "";
+String Hete = "";
+int address = 0;
+int boardId = 0;
+
+
 
 WiFiClient espClient;
 WiFiUDP ntpUDP;
@@ -88,9 +93,9 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    ""    
-#define emailSenderPassword   ""
-#define emailRecipient        "r"  
+#define emailSenderAccount    "michael.marchessoux@bbox.fr"    
+#define emailSenderPassword   "vivi@mimi2909"
+#define emailRecipient        "mikl-dev@bbox.fr"  
 #define smtpServer            "smtp.bbox.fr"
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
@@ -364,11 +369,11 @@ void photo()
     fb = esp_camera_fb_get();  
     if(!fb) {
       Serial.println("Camera capture failed");
-      Interroge_SPIFFS();    // interroge le spiffs
-      ESP.restart();         // redemarre l'ESP
+      Interroge_SPIFFS();
+      ESP.restart();
       return;
     }
-    
+
     String nomImage = "/" + Sday + Smonth + Syear + "  " + Sheure + Smin + ".jpg";
     Serial.print(nomImage);
     String path = nomImage;
@@ -389,15 +394,12 @@ void photo()
   //    EEPROM.commit();
     }
     file.close();
-   
-   // si la taille de la phtot est < ou = a 50ko alors redemarre
-   if (SPIFFS.usedBytes() <= 50000)
-   {
-      ESP.restart();
-   }
-   
-   
     esp_camera_fb_return(fb); 
+
+    if (SPIFFS.usedBytes() <= 50000)
+    {
+      ESP.restart();
+    }
     
     // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
     pinMode(4, OUTPUT);
@@ -430,8 +432,27 @@ void photo()
     // Set the subject
     smtpData.setSubject(emailSubject);
 
+    EEPROM.write(address, boardId);
+
+    if (heureEte == 1)
+    {
+      Hete = "heure d'été.";
+    }
+    else
+    {
+      Hete = "heure d'hiver.";
+    }
+    
     // Set the message with HTML format
-    smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
+    String contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
+                          "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" \
+                          "Heure de levé concatenée: " + ConcHeureLeve + "<br>" \
+                          "Heure de maintenant concaténée: " + ConcNow + "<br>" \
+                          "Heure du couché concatenée: " + ConcHeureCouche + "<br>" \
+                          "Nous sommes en " + Hete + "<br>" \                     
+                          "L'ESP a redémaré " + String(EEPROM.read(address)) + " fois." + "<br>";  //"<div><h1> Récapitulatif des variables </h1></div>" + "<br>" 
+
+    smtpData.setMessage(contenueMail, true); //"<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
     // Set the email message in text format (raw)
     //smtpData.setMessage("Thing on position #00", false);
 
@@ -481,6 +502,7 @@ void setup()
   if (!SPIFFS.begin(true)) 
   {
     Serial.println("An Error has occurred while mounting SPIFFS");
+    boardId += 1;
     ESP.restart();
   }
   else 
@@ -556,6 +578,7 @@ void loop()
 //*** si le wifi est déconnecté alors redemarre l'ESP
 if (WiFi.status() != WL_CONNECTED) 
 {
+  boardId += 1;
   ESP.restart();
 }
 //*** Recupere la date et l'heure du reseau et met en forme
