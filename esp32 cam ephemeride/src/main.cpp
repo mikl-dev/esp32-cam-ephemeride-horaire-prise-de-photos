@@ -451,7 +451,8 @@ void photo()
                           "Heure du couché concatenée: " + ConcHeureCouche + "<br>" \
                           "Nous sommes en " + Hete + "<br>" \                     
                           "L'ESP a redémaré " + String(EEPROM.read(address)) + " fois." + "<br>";  //"<div><h1> Récapitulatif des variables </h1></div>" + "<br>" 
-
+                          // ajouter la date du dernier restart
+                          
     smtpData.setMessage(contenueMail, true); //"<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
     // Set the email message in text format (raw)
     //smtpData.setMessage("Thing on position #00", false);
@@ -503,6 +504,7 @@ void setup()
   {
     Serial.println("An Error has occurred while mounting SPIFFS");
     boardId += 1;
+    EEPROM.write(address, boardId);
     ESP.restart();
   }
   else 
@@ -579,6 +581,7 @@ void loop()
 if (WiFi.status() != WL_CONNECTED) 
 {
   boardId += 1;
+  EEPROM.write(address, boardId);
   ESP.restart();
 }
 //*** Recupere la date et l'heure du reseau et met en forme
