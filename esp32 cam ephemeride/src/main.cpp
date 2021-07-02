@@ -370,6 +370,7 @@ void photo()
     if(!fb) {
       Serial.println("Camera capture failed");
       Interroge_SPIFFS();
+      EEPROM.write(address, boardId);
       ESP.restart();
       return;
     }
@@ -398,6 +399,8 @@ void photo()
 
     if (SPIFFS.usedBytes() <= 50000)
     {
+      board += 1;
+      EEPROM.write(address, boardId);
       ESP.restart();
     }
     
