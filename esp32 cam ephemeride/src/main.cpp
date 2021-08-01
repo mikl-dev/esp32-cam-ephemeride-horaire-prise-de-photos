@@ -42,9 +42,8 @@
 //*******************************************************************************
 //************* Declaration des variables *******************************/
 const char* ssid = "";  
-const char* password = ""; 
+const char* password = "";
 
-//FSInfo fsInfo;
 
 const int decalage = 2;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
 const int delaiDemande = 5 * 60; // nombre de secondes entre deux demandes consécutives au serveur NTP
@@ -79,11 +78,6 @@ String Smin = "";
 String Ssec = "";
 String heureenforme = "";
 String minenforme = "";
-String Hete = "";
-int address = 0;
-int boardId = 0;
-
-
 
 WiFiClient espClient;
 WiFiUDP ntpUDP;
@@ -96,7 +90,7 @@ long int _now = 0;
 #define emailSenderAccount    ""    
 #define emailSenderPassword   ""
 #define emailRecipient        ""  
-#define smtpServer            ""
+#define smtpServer            "smtp.bbox.fr"
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
 SMTPData smtpData;
@@ -124,14 +118,9 @@ SMTPData smtpData;
 int pictureNumber = 0;
 //**********************************************************************
 //******************** Programmes apellés ******************************
-void Interroge_SPIFFS()
-{
-  Serial.print("SPIFFS.totalBytes: "); Serial.println(SPIFFS.totalBytes());
-  Serial.print("SPIFFS.usedBytes: "); Serial.println(SPIFFS.usedBytes());
-}
 void RecupereHeureDate()
 {
-//*** chercher l'heure sur le reseau  a chaque debut de boucle***
+  //*** chercher l'heure sur le reseau  a chaque debut de boucle***
 //ca.pool.ntp.org serveurs canadiens. En Europe, essayez europe.pool.ntp.org ou fr.pool.ntp.org
 configTime(decalage * 3600, 0, "fr.pool.ntp.org");  
 
@@ -199,7 +188,7 @@ Serial.print("heure: "); Serial.print(Sheure); Serial.print(":"); Serial.print(S
     month = Smonth.toInt();
   }
 
-  //Serial.print("controle mois: "); Serial.print(Smonth);
+  Serial.print("controle mois: "); Serial.print(month);
 
   year = timeinfo->tm_year + 1900;
   Syear = String(year);
@@ -369,12 +358,9 @@ void photo()
     fb = esp_camera_fb_get();  
     if(!fb) {
       Serial.println("Camera capture failed");
-      Interroge_SPIFFS();
-      EEPROM.write(address, boardId);
-      ESP.restart();
       return;
     }
-
+    
     String nomImage = "/" + Sday + Smonth + Syear + "  " + Sheure + Smin + ".jpg";
     Serial.print(nomImage);
     String path = nomImage;
@@ -396,13 +382,6 @@ void photo()
     }
     file.close();
     esp_camera_fb_return(fb); 
-
-    if (SPIFFS.usedBytes() <= 50000)
-    {
-      board += 1;
-      EEPROM.write(address, boardId);
-      ESP.restart();
-    }
     
     // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
     pinMode(4, OUTPUT);
@@ -435,28 +414,8 @@ void photo()
     // Set the subject
     smtpData.setSubject(emailSubject);
 
-    EEPROM.write(address, boardId);
-
-    if (heureEte == 1)
-    {
-      Hete = "heure d'été.";
-    }
-    else
-    {
-      Hete = "heure d'hiver.";
-    }
-    
     // Set the message with HTML format
-    String contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
-                          "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" \
-                          "Heure de levé concatenée: " + ConcHeureLeve + "<br>" \
-                          "Heure de maintenant concaténée: " + ConcNow + "<br>" \
-                          "Heure du couché concatenée: " + ConcHeureCouche + "<br>" \
-                          "Nous sommes en " + Hete + "<br>" \                     
-                          "L'ESP a redémaré " + String(EEPROM.read(address)) + " fois." + "<br>";  //"<div><h1> Récapitulatif des variables </h1></div>" + "<br>" 
-                          // ajouter la date du dernier restart
-                          
-    smtpData.setMessage(contenueMail, true); //"<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
+    smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
     // Set the email message in text format (raw)
     //smtpData.setMessage("Thing on position #00", false);
 
@@ -469,7 +428,7 @@ void photo()
     //String nomFichier = String(day) + String(Smonth) + String(year) + "    " + String(hours) + String(minutes);
     //Serial.print("Date pour la photo: "); Serial.println(nomFichier);
     //smtpData.addAttachFile("/" + nomFichier + ".jpg");
-    //smtpData.addAttachFile("/Sight.jpg");    //-----> original
+    smtpData.addAttachFile("/Sight.jpg");    //-----> original
     smtpData.addAttachFile(nomImage);
     //smtpData.setFileStorageType(MailClientStorageType::SD);
     
@@ -483,12 +442,6 @@ void photo()
 
     //Clear all data from Email object to free memory
     smtpData.empty();
-
-    Interroge_SPIFFS();
-    SPIFFS.remove(nomImage);
-    Serial.print("Fichier effacé: "); Serial.println(SPIFFS.remove(nomImage));
-
-    Interroge_SPIFFS();
 
     for (int i=0; i<1800; i++)    
     {
@@ -506,8 +459,6 @@ void setup()
   if (!SPIFFS.begin(true)) 
   {
     Serial.println("An Error has occurred while mounting SPIFFS");
-    boardId += 1;
-    EEPROM.write(address, boardId);
     ESP.restart();
   }
   else 
@@ -583,8 +534,6 @@ void loop()
 //*** si le wifi est déconnecté alors redemarre l'ESP
 if (WiFi.status() != WL_CONNECTED) 
 {
-  boardId += 1;
-  EEPROM.write(address, boardId);
   ESP.restart();
 }
 //*** Recupere la date et l'heure du reseau et met en forme
