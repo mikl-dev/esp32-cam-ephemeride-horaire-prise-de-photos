@@ -417,7 +417,7 @@ void photo()
     // Set the sender name and Email
     
     //Serial.print("Date pour le mail: "); Serial.print(day); Serial.print("/"); Serial.print(Smonth); Serial.print("/"); Serial.println(year);
-    String message = String(day) + String(Smonth) + String(year) + "    " + String(timeinfo->tm_hour) + String(Smin);
+    String message = String(Sday) + String(Smonth) + String(year) + "    " + String(timeinfo->tm_hour) + String(Smin);
     
     smtpData.setSender(message, emailSenderAccount);
     //smtpData.setSender("Cat_00", emailSenderAccount);    --------------------------> original
