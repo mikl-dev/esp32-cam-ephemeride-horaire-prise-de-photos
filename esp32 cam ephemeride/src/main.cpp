@@ -41,8 +41,8 @@
 #include <WiFiUdp.h>
 //*******************************************************************************
 //************* Declaration des variables *******************************/
-const char* ssid = "";  
-const char* password = "";
+const char* ssid = "Bbox-E9ED9E75-pro-2.4G";  //"Bbox-E9ED9E75-pro-2.4G";
+const char* password = "Vivimimi123456789"; //"Vivimimi123456789"; 
 
 
 const int decalage = 2;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
@@ -87,9 +87,9 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    ""    
-#define emailSenderPassword   ""
-#define emailRecipient        ""  
+#define emailSenderAccount    "michael.marchessoux@bbox.fr"    
+#define emailSenderPassword   "vivi@mimi2909"
+#define emailRecipient        "mikl-dev@bbox.fr"  
 #define smtpServer            "smtp.bbox.fr"
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
@@ -351,7 +351,12 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
 void photo()
  {
      
-   //****** debut de boucle***************************************  
+   //****** debut de boucle*************************************** 
+    SPIFFS.format();   // efface le spiff avant toute chose
+    delay(100);
+    Serial.println("");
+    Serial.print("Taille du SPIFFS: "); Serial.println(SPIFFS.usedBytes());
+
     camera_fb_t * fb = NULL;
     
     // Take Picture with Camera
@@ -373,7 +378,16 @@ void photo()
     if(!file){
       Serial.println("Failed to open file in writing mode");
     } 
-    else {
+    else 
+    {
+      if (fb->len < 500)
+      {
+        ESP.restart();
+      }
+
+      Serial.println("");
+      Serial.println("taille de la photo: "); Serial.println(fb->len);
+
       file.write(fb->buf, fb->len); // payload (image), payload length
       //Serial.println(path);
       //Serial.printf("Saved file to path: %s\n", path);
@@ -414,8 +428,19 @@ void photo()
     // Set the subject
     smtpData.setSubject(emailSubject);
 
-    // Set the message with HTML format
+
+
     smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
+    String contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
+                          "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" ;
+                             
+    smtpData.setMessage(contenueMail, true);
+
+
+
+
+    // Set the message with HTML format
+    //smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
     // Set the email message in text format (raw)
     //smtpData.setMessage("Thing on position #00", false);
 
