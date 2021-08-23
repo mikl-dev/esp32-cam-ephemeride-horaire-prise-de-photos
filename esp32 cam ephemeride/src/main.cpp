@@ -464,6 +464,11 @@ void photo()
     //Start sending Email, can be set callback function to track the status
     if (!MailClient.sendMail(smtpData))
       Serial.println("Error sending Email, " + MailClient.smtpErrorReason());
+      
+      String contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
+                          "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" ;
+                          "Raison de renvoi de mail:" + MailClient.smtpErrorReason();   
+      smtpData.setMessage(contenueMail, true);
 
     //Clear all data from Email object to free memory
     smtpData.empty();
