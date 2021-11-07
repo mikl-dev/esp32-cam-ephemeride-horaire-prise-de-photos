@@ -41,11 +41,10 @@
 #include <WiFiUdp.h>
 //*******************************************************************************
 //************* Declaration des variables *******************************/
-const char* ssid = ""
-const char* password = ""
+const char* ssid = "Bbox-E9ED9E75-pro-2.4G";
+const char* password = "Vivimimi123456789";
 
-
-const int decalage = 2;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
+const int decalage = 1;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
 const int delaiDemande = 5 * 60; // nombre de secondes entre deux demandes consécutives au serveur NTP
 
 unsigned long derniereDemande = millis(); // moment de la plus récente demande au serveur NTP
@@ -78,6 +77,7 @@ String Smin = "";
 String Ssec = "";
 String heureenforme = "";
 String minenforme = "";
+int hleve = 0 ;
 
 WiFiClient espClient;
 WiFiUDP ntpUDP;
@@ -87,10 +87,10 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    ""    
-#define emailSenderPassword   ""
-#define emailRecipient        ""  
-#define smtpServer            "smtp.bbox.fr"
+#define emailSenderAccount    "michael.marchessoux@bbox.fr"   //"MeteoCaudry@gmail.com" //"michael.marchessoux@bbox.fr"    
+#define emailSenderPassword   "vivi@mimi2909"        //"iny5F3m9s6YbCxW"  //"vivi@mimi2909"
+#define emailRecipient        "mikl-dev@bbox.fr"    //"MeteoCaudry@gmail.com"  //"mikl-dev@bbox.fr"  
+#define smtpServer            "smtp.bbox.fr"        //"smtp.gmail.com"   //"smtp.bbox.fr"
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
 SMTPData smtpData;
@@ -188,7 +188,7 @@ Serial.print("heure: "); Serial.print(Sheure); Serial.print(":"); Serial.print(S
     month = Smonth.toInt();
   }
 
-  Serial.print("controle mois: "); Serial.print(month);
+  Serial.print("controle mois: "); Serial.println(month);
 
   year = timeinfo->tm_year + 1900;
   Syear = String(year);
@@ -265,7 +265,7 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
     // Print sunrise and sunset if available according to location on Earth
   if( sun.riseAndSetState == RiseAndSetOk )
   {
-    int hours,minutes;
+    //int hours,minutes;  //****************************************************************************
     FLOAT seconds;
 
     // Convert floating hours to hours, minutes, seconds and display.
@@ -287,6 +287,8 @@ void printRiseAndSet(char *city, FLOAT latitude, FLOAT longitude, int UTCOffset,
     Serial.print("m");
     Serial.print(seconds,0);
     Serial.println("s");
+
+    hleve = 60 * hours + minutes;
 
     ConcHeureLeve = String(hours) + String(minutes);
     Serial.print("ConcHeureLeve: "); Serial.println(ConcHeureLeve);
@@ -373,8 +375,6 @@ void photo()
     File file = SPIFFS.open(path, FILE_WRITE);
     // Path where new picture will be saved in SD Card
     
-
-
     if(!file){
       Serial.println("Failed to open file in writing mode");
     } 
@@ -432,8 +432,10 @@ void photo()
 
     smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Voila la photo !!</h1><p>- Envoyer depuis l'ESP32-CAM</p></div>", true);
     String contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
-                          "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" ;
-                             
+                          "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" \
+                          "Heure de levé: " + String(ConcHeureLeve) + "<br>" \
+                          "Heure de couché: " + String(ConcHeureCouche)+ "<br>";
+                          
     smtpData.setMessage(contenueMail, true);
 
 
@@ -453,7 +455,7 @@ void photo()
     //String nomFichier = String(day) + String(Smonth) + String(year) + "    " + String(hours) + String(minutes);
     //Serial.print("Date pour la photo: "); Serial.println(nomFichier);
     //smtpData.addAttachFile("/" + nomFichier + ".jpg");
-    smtpData.addAttachFile("/Sight.jpg");    //-----> original
+    //smtpData.addAttachFile("/Sight.jpg");    //-----> original
     smtpData.addAttachFile(nomImage);
     //smtpData.setFileStorageType(MailClientStorageType::SD);
     
@@ -465,7 +467,7 @@ void photo()
     if (!MailClient.sendMail(smtpData))
       Serial.println("Error sending Email, " + MailClient.smtpErrorReason());
       
-      String contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
+      contenueMail = "Bytes utilisés dans le SPIFFS: " + String(SPIFFS.usedBytes()) + "." + "<br>" \
                           "Puissance du signal WIFI: " + String(WiFi.RSSI()) + "<br>" ;
                           "Raison de renvoi de mail:" + MailClient.smtpErrorReason();   
       smtpData.setMessage(contenueMail, true);
@@ -473,10 +475,36 @@ void photo()
     //Clear all data from Email object to free memory
     smtpData.empty();
 
-    for (int i=0; i<1800; i++)    
+    Serial.print("ConcHeureLeve avant comptage: "); Serial.println(ConcHeureLeve);   //747
+    Serial.print("ConcHeurecouche avant comptage: "); Serial.println(ConcHeureCouche); //1713
+
+
+    Serial.print("hours: "); Serial.println(hours);
+    Serial.print("minutes: "); Serial.println(minutes);
+
+
+
+
+
+
+    //*** calcul de 32 photos entre levé et couché
+    Serial.print("hleve: "); Serial.println(hleve);
+    int hcouche = 60 * hours + minutes;
+    Serial.print("hcouche: "); Serial.println(hcouche);
+
+    int soustractionhcouchehleve = hcouche - hleve;
+    Serial.print("soustractionhcouchehleve: "); Serial.println(soustractionhcouchehleve);
+
+    int delaiPhoto = (soustractionhcouchehleve / 31) *0.987;
+    Serial.print("delaiPhoto: "); Serial.println(delaiPhoto);
+
+    Serial.print("---------------------------------------------------------- FIN DU PROGRAMME ----------------------------------------------------------");
+
+    //**********
+    for (int i=0; i<delaiPhoto; i++)    //1800/60=30
     {
     //  Serial.println(i);
-      delay(1000);
+      delay(60000);    //1000
     } 
 
 }
@@ -527,7 +555,7 @@ void setup()
   if(psramFound())
   {
     config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-    config.jpeg_quality = 10;
+    config.jpeg_quality = 0 ; //10;
     config.fb_count = 2;
   } 
   else 
