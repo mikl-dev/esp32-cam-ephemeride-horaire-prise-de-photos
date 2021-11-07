@@ -41,8 +41,8 @@
 #include <WiFiUdp.h>
 //*******************************************************************************
 //************* Declaration des variables *******************************/
-const char* ssid = "Bbox-E9ED9E75-pro-2.4G";
-const char* password = "Vivimimi123456789";
+const char* ssid = "";
+const char* password = "";
 
 const int decalage = 1;  // la valeur dépend de votre fuseau horaire. Essayez 2 pour la France. 
 const int delaiDemande = 5 * 60; // nombre de secondes entre deux demandes consécutives au serveur NTP
@@ -87,10 +87,10 @@ long int _now = 0;
 
 // To send Email using Gmail use port 465 (SSL) and SMTP Server smtp.gmail.com
 // YOU MUST ENABLE less secure app option https://myaccount.google.com/lesssecureapps?pli=1
-#define emailSenderAccount    "michael.marchessoux@bbox.fr"   //"MeteoCaudry@gmail.com" //"michael.marchessoux@bbox.fr"    
-#define emailSenderPassword   "vivi@mimi2909"        //"iny5F3m9s6YbCxW"  //"vivi@mimi2909"
-#define emailRecipient        "mikl-dev@bbox.fr"    //"MeteoCaudry@gmail.com"  //"mikl-dev@bbox.fr"  
-#define smtpServer            "smtp.bbox.fr"        //"smtp.gmail.com"   //"smtp.bbox.fr"
+#define emailSenderAccount    "";
+#define emailSenderPassword   "";
+#define emailRecipient        "";
+#define smtpServer            "";
 #define smtpServerPort         465  //465 //587 //465
 #define emailSubject          "Photo de L'ESP32-CAM"
 SMTPData smtpData;
